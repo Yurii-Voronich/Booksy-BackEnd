@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { getSheetsClient } from "../services/googleSheets.js";
 import { sendToTelegram } from "../services/telegramService.js";
-
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 export const sendMessage = async (req, res) => {
   const { name, email, message, dataid } = req.body;
 

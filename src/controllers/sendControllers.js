@@ -1,41 +1,30 @@
-import "dotenv/config";
-import { getSheetsClient } from "../services/googleSheets.js";
+import createHttpError from "http-errors";
+import { appendToSheet } from "../services/googleSheets.js";
 import { sendToTelegram } from "../services/telegramService.js";
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-export const sendMessage = async (req, res) => {
+
+export const sendMessage = async (req, res, next) => {
   const { name, email, message, dataid } = req.body;
 
   if (!name || !email) {
-    return res.status(400).json({ error: "поля ім'я та email обовʼязкові" });
+    return next(createHttpError(400, "Поля імʼя та email обовʼязкові"));
   }
-
-  const text = `
-<b>📩 Івент ${dataid}:</b>
+  let text = `<b>📩 Івент ${dataid}:</b>
 👤 <b>Імʼя:</b> ${name}
-📧 <b>Email:</b> ${email}
-💬 <b>Повідомлення:</b> ${message}
-  `.trim();
+📧 <b>Email:</b> ${email}`;
 
-  try {
-    await sendToTelegram(text);
-    const sheets = await getSheetsClient();
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: "Лист1",
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          [new Date().toISOString(), dataid, name, email, message || "—"],
-        ],
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Надіслано в Telegram і записано у Google Таблицю!",
-    });
-  } catch (error) {
-    console.error("Telegram/Sheets error:", error);
-    res.status(500).json({ error: "Не вдалося обробити запит" });
+  if (message && message.trim() !== "") {
+    text += `\n💬 <b>Повідомлення:</b> ${message}`;
   }
+
+  await sendToTelegram(text);
+
+  await appendToSheet({
+    range: "Лист1",
+    values: [[new Date().toISOString(), dataid, name, email, message || "—"]],
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Надіслано в Telegram і записано у Google Таблицю!",
+  });
 };

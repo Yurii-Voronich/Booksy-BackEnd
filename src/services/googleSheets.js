@@ -19,3 +19,14 @@ export const getSheetsClient = async () => {
   sheetsClient = google.sheets({ version: "v4", auth });
   return sheetsClient;
 };
+
+export const appendToSheet = async ({ range, values }) => {
+  const client = await getSheetsClient();
+
+  return client.spreadsheets.values.append({
+    spreadsheetId: process.env.SPREADSHEET_ID,
+    range,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values },
+  });
+};
